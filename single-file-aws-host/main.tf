@@ -1,18 +1,6 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "eu-north-1"
-}
 
 resource "aws_security_group" "web_sg" {
-  name        = "terraform-med-level-web-sg"
+  name        = "terraform-med-level-web-sg1"
   description = "Allow HTTP traffic to web server"
 
   ingress {
@@ -30,6 +18,13 @@ resource "aws_security_group" "web_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-web-server-sg"
+    Project     = var.project_name
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
 }
 
 data "aws_ssm_parameter" "al2023_ami" {
@@ -38,7 +33,7 @@ data "aws_ssm_parameter" "al2023_ami" {
 
 resource "aws_instance" "web_server" {
   ami           = data.aws_ssm_parameter.al2023_ami.value
-  instance_type = "t3.micro"
+  instance_type = var.instance_type
 
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
@@ -59,11 +54,9 @@ resource "aws_instance" "web_server" {
               </html>' > /var/www/html/index.html
               EOF
   tags = {
-    Name = "terraform-web-server"
+    Name        = "${var.project_name}-${var.environment}-web-server"
+    Project     = var.project_name
+    Environment = var.environment
+    ManagedBy   = "Terraform"
   }
-}
-
-output "ec2_public_ip" {
-  description = "Public IP address of the EC2 web server"
-  value       = aws_instance.web_server.public_ip
 }
