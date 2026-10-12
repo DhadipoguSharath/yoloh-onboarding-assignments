@@ -9,9 +9,9 @@ import java.sql.SQLException;
 
 public class DBConnection {
     
-    private static final String URL = "jdbc:postgresql://localhost:5432/postgres";
-    private static final String USERNAME = "postgres";
-    private static final String PASSWORD = "Sharath@14";
+    private static final String URL = System.getenv("URL");
+    private static final String USERNAME = System.getenv("USERNAME");
+    private static final String PASSWORD = System.getenv("PASSWORD");
 
     static {
         try
