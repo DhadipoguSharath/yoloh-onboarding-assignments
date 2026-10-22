@@ -43,7 +43,21 @@ public class HelloHandler implements
 
             // 1. CREATE EMPLOYEE (POST /employees or /employees/)
             if ("POST".equalsIgnoreCase(method) && path.matches("/employees/?")) {
-                Employee employee = objectMapper.readValue(event.getBody(), Employee.class);
+
+                String body = event.getBody();
+
+                if (body == null || body.isBlank()) {
+                    return response(400, "Request body cannot be empty");
+                }
+
+                Employee employee;
+
+                try {
+                    employee = objectMapper.readValue(body, Employee.class);
+                } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                    return response(400, "Invalid JSON request body");
+                }
+
                 Employee created = employeeService.addEmployee(employee);
                 return response(201, created);
             }
