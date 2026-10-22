@@ -1,1 +1,0 @@
-# yoloh-onboarding-assignments
