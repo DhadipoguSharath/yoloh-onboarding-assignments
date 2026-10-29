@@ -1,13 +1,15 @@
 package com.employee.model;
 
 public class Employee {
+
     private int employeeId;
     private String name;
     private String email;
     private String department;
-    private String status;
+    private EmployeeStatus status;
 
-    public Employee(int employeeId, String name, String email, String department, String status) {
+    public Employee(int employeeId, String name, String email,
+            String department, EmployeeStatus status) {
         this.employeeId = employeeId;
         this.name = name;
         this.email = email;
@@ -15,12 +17,14 @@ public class Employee {
         this.status = status;
     }
 
-    public Employee(String name, String email, String department, String status) {
+    public Employee(String name, String email,
+            String department, EmployeeStatus status) {
         this.name = name;
         this.email = email;
         this.department = department;
         this.status = status;
     }
+
     public int getEmployeeId() {
         return employeeId;
     }
@@ -53,20 +57,20 @@ public class Employee {
         this.department = department;
     }
 
-    public String getStatus() {
+    public EmployeeStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(EmployeeStatus status) {
         this.status = status;
     }
 
     @Override
     public String toString() {
-        return  "employeeId=" + employeeId +
-                ", name='" + name + '\'' +
-                ", email='" + email + '\'' +
-                ", department='" + department + '\'' +
-                ", status='" + status + '\'';
+        return "employeeId=" + employeeId
+                + ", name='" + name + '\''
+                + ", email='" + email + '\''
+                + ", department='" + department + '\''
+                + ", status='" + status + '\'';
     }
 }
