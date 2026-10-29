@@ -1,19 +1,26 @@
 package com.employee.dao;
 
 import com.employee.model.Employee;
-import java.util.List;
+import com.employee.exception.EmployeeNotFoundException;
+import com.employee.exception.InvalidEmployeeDataException;
 
+import java.sql.SQLException;
+import java.util.List;
 
 public interface EmployeeDAO {
 
-    public void addEmployee(Employee employee);
+    void addEmployee(Employee employee)
+            throws SQLException, InvalidEmployeeDataException;
 
-    public void updateEmployee(Employee employee);
+    void updateEmployee(Employee employee)
+            throws SQLException, EmployeeNotFoundException,
+                   InvalidEmployeeDataException;
 
-    public void deleteEmployee(int employeeId);
+    void deleteEmployee(int employeeId)
+            throws SQLException, EmployeeNotFoundException;
 
-    public Employee getEmployeeById(int employeeId);
+    Employee getEmployeeById(int employeeId)
+            throws SQLException, EmployeeNotFoundException;
 
-    public List<Employee> getAllEmployees();
-
+    List<Employee> getAllEmployees() throws SQLException;
 }
