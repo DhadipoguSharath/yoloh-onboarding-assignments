@@ -1,135 +1,110 @@
 package com.employee.service;
 
 import com.employee.dao.EmployeeDAO;
+import com.employee.dao.EmployeeDAOImpl;
+import com.employee.exception.EmployeeNotFoundException;
+import com.employee.exception.InvalidEmployeeDataException;
 import com.employee.model.Employee;
-import com.employee.util.DBConnection;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
-public class EmployeeService implements EmployeeDAO{
-    
+public class EmployeeService {
 
-    private static final String INSERT_QUERY = "INSERT INTO employees (name, email, department, status) VALUES (?, ?, ?, ?)";
-    private static final String UPDATE_QUERY = "UPDATE employees SET name = ?, email = ?, department = ?, status = ? WHERE employee_id = ?";
-    private static final String DELETE_QUERY = "DELETE FROM employees WHERE employee_id = ?";
-    private static final String SELECT_ALL_QUERY = "SELECT * FROM employees";
-    
-    public void addEmployee(Employee employee) {
-        
-        try(Connection connection = DBConnection.getConnection()) {
-            PreparedStatement pstmt = connection.prepareStatement(INSERT_QUERY);
+    private final EmployeeDAO employeeDAO;
 
-            pstmt.setString(1, employee.getName());
-            pstmt.setString(2, employee.getEmail());
-            pstmt.setString(3, employee.getDepartment());
-            pstmt.setString(4, employee.getStatus());
-            
-            int rows = pstmt.executeUpdate();
-
-            if(rows > 0) {
-                System.out.println("Employee added successfully.");
-            } else {
-                System.out.println("Failed to add employee.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        
+    public EmployeeService() {
+        this.employeeDAO = new EmployeeDAOImpl();
     }
 
-    public void updateEmployee(Employee employee) {
+    // Constructor injection for testing or alternative DAO implementations
+    public EmployeeService(EmployeeDAO employeeDAO) {
+        this.employeeDAO = employeeDAO;
+    }
 
-        try(Connection connection = DBConnection.getConnection()) {
-            PreparedStatement pstmt = connection.prepareStatement(UPDATE_QUERY);
-            pstmt.setString(1, employee.getName());
-            pstmt.setString(2, employee.getEmail());
-            pstmt.setString(3, employee.getDepartment());
-            pstmt.setString(4, employee.getStatus());
-            pstmt.setInt(5, employee.getEmployeeId());
-            int rows = pstmt.executeUpdate();
+    public void addEmployee(Employee employee)
+            throws SQLException, InvalidEmployeeDataException {
 
-            if(rows > 0) {
-                System.out.println("Employee updated successfully.");
-            } else {
-                System.out.println("Failed to update employee.");
-            }
+        validateEmployee(employee);
+        employeeDAO.addEmployee(employee);
+    }
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public void updateEmployee(Employee employee)
+            throws SQLException, EmployeeNotFoundException,
+                   InvalidEmployeeDataException {
+
+        validateEmployee(employee);
+
+        if (employee.getEmployeeId() <= 0) {
+            throw new InvalidEmployeeDataException(
+                    "Employee ID must be greater than zero.");
+        }
+
+        employeeDAO.updateEmployee(employee);
+    }
+
+    public void deleteEmployee(int employeeId)
+            throws SQLException, EmployeeNotFoundException {
+
+        if (employeeId <= 0) {
+            throw new IllegalArgumentException(
+                    "Employee ID must be greater than zero.");
+        }
+
+        employeeDAO.deleteEmployee(employeeId);
+    }
+
+    public Employee getEmployeeById(int employeeId)
+            throws SQLException, EmployeeNotFoundException {
+
+        if (employeeId <= 0) {
+            throw new IllegalArgumentException(
+                    "Employee ID must be greater than zero.");
+        }
+
+        return employeeDAO.getEmployeeById(employeeId);
+    }
+
+    public List<Employee> getAllEmployees() throws SQLException {
+        return employeeDAO.getAllEmployees();
+    }
+
+    private void validateEmployee(Employee employee)
+            throws InvalidEmployeeDataException {
+
+        if (employee == null) {
+            throw new InvalidEmployeeDataException(
+                    "Employee data cannot be null.");
+        }
+
+        if (isBlank(employee.getName())) {
+            throw new InvalidEmployeeDataException(
+                    "Employee name cannot be empty.");
+        }
+
+        if (isBlank(employee.getEmail())) {
+            throw new InvalidEmployeeDataException(
+                    "Employee email cannot be empty.");
+        }
+
+        if (!employee.getEmail().matches(
+                "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            throw new InvalidEmployeeDataException(
+                    "Please provide a valid email address.");
+        }
+
+        if (isBlank(employee.getDepartment())) {
+            throw new InvalidEmployeeDataException(
+                    "Employee department cannot be empty.");
+        }
+
+        if (employee.getStatus() == null) {
+            throw new InvalidEmployeeDataException(
+                    "Employee status cannot be null.");
         }
     }
 
-    public void deleteEmployee(int employeeId) {
-        try(Connection connection = DBConnection.getConnection()) {
-            PreparedStatement pstmt = connection.prepareStatement(DELETE_QUERY);
-            pstmt.setInt(1, employeeId);
-            int rows = pstmt.executeUpdate();
-
-            if(rows > 0) {
-                System.out.println("Employee deleted successfully.");
-            } else {
-                System.out.println("Failed to delete employee.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    public Employee getEmployeeById(int employeeId) {
-        Employee employee = null;
-        try(Connection connection = DBConnection.getConnection()) {
-            PreparedStatement pstmt = connection.prepareStatement("SELECT * FROM employees WHERE employee_id = ?");
-            pstmt.setInt(1, employeeId);
-            ResultSet rs = pstmt.executeQuery();
-
-            if(rs.next()) {
-                String name = rs.getString("name");
-                String email = rs.getString("email");
-                String department = rs.getString("department");
-                String status = rs.getString("status");
-                employee = new Employee(employeeId, name, email, department, status);
-                return employee;
-            } else {
-                System.out.println("Employee not found.");
-                return null;
-            }
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return employee;
-
-    }
-
-    public List<Employee> getAllEmployees() {
-        try(Connection connection = DBConnection.getConnection()) {
-            PreparedStatement pstmt = connection.prepareStatement(SELECT_ALL_QUERY);
-            ResultSet rs = pstmt.executeQuery();
-
-            List<Employee> employees = new ArrayList<>();
-
-            while(rs.next()) {
-                int employeeId = rs.getInt("employee_id");
-                String name = rs.getString("name");
-                String email = rs.getString("email");
-                String department = rs.getString("department");
-                String status = rs.getString("status");
-                Employee employee = new Employee(employeeId, name, email, department, status);
-                employees.add(employee);
-            }
-            return employees;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
-        }
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }
