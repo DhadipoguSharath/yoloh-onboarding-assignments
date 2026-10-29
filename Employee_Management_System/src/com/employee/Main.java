@@ -1,10 +1,14 @@
-
 package com.employee;
 
-import com.employee.model.Employee;
-import com.employee.service.EmployeeService;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Scanner;
+
+import com.employee.exception.EmployeeNotFoundException;
+import com.employee.exception.InvalidEmployeeDataException;
+import com.employee.model.Employee;
+import com.employee.model.EmployeeStatus;
+import com.employee.service.EmployeeService;
 
 public class Main {
 
@@ -27,153 +31,175 @@ public class Main {
             System.out.println("4. Update Employee");
             System.out.println("5. Delete Employee");
             System.out.println("6. Exit");
-            System.out.print("Enter your choice: ");
 
-            while (!scanner.hasNextInt()) {
-                System.out.println("Invalid input! Please enter a number.");
-                scanner.nextLine();
-                System.out.print("Enter your choice: ");
-            }
+            choice = readInteger(scanner, "Enter your choice: ");
 
-            choice = scanner.nextInt();
-            scanner.nextLine(); // Consume the newline
+            try {
+                switch (choice) {
 
-            switch (choice) {
+                    case 1:
+                        System.out.println("\n--- Add Employee ---");
 
-                case 1:
-                    System.out.println("\n--- Add Employee ---");
+                        System.out.print("Enter name: ");
+                        String name = scanner.nextLine();
 
-                    System.out.print("Enter name: ");
-                    String name = scanner.nextLine();
+                        System.out.print("Enter email: ");
+                        String email = scanner.nextLine();
 
-                    System.out.print("Enter email: ");
-                    String email = scanner.nextLine();
+                        System.out.print("Enter department: ");
+                        String department = scanner.nextLine();
 
-                    System.out.print("Enter department: ");
-                    String department = scanner.nextLine();
+                        EmployeeStatus status =
+                                readEmployeeStatus(scanner);
 
-                    System.out.print("Enter status (ACTIVE/INACTIVE): ");
-                    String status = scanner.nextLine();
+                        Employee employee = new Employee(
+                                name, email, department, status);
 
-                    Employee employee =
-                            new Employee(name, email, department, status);
+                        employeeService.addEmployee(employee);
 
-                    employeeService.addEmployee(employee);
-                    break;
+                        System.out.println("Employee added successfully.");
+                        break;
 
-                case 2:
-                    System.out.println("\n--- View Employee ---");
+                    case 2:
+                        System.out.println("\n--- View Employee ---");
 
-                    System.out.print("Enter employee ID: ");
+                        int employeeId = readInteger(
+                                scanner, "Enter employee ID: ");
 
-                    while (!scanner.hasNextInt()) {
-                        System.out.println("Invalid ID! Enter a number.");
-                        scanner.nextLine();
-                        System.out.print("Enter employee ID: ");
-                    }
+                        Employee emp =
+                                employeeService.getEmployeeById(employeeId);
 
-                    int employeeId = scanner.nextInt();
-                    scanner.nextLine();
-
-                    Employee emp =
-                            employeeService.getEmployeeById(employeeId);
-
-                    if (emp != null) {
                         System.out.println("\nEmployee Details");
                         System.out.println("ID: " + emp.getEmployeeId());
                         System.out.println("Name: " + emp.getName());
                         System.out.println("Email: " + emp.getEmail());
                         System.out.println("Department: " + emp.getDepartment());
                         System.out.println("Status: " + emp.getStatus());
-                    } else {
-                        System.out.println("Employee not found.");
-                    }
-                    break;
+                        break;
 
-                case 3:
-                    System.out.println("\n--- All Employees ---");
+                    case 3:
+                        System.out.println("\n--- All Employees ---");
 
-                    List<Employee> employees =
-                            employeeService.getAllEmployees();
+                        List<Employee> employees =
+                                employeeService.getAllEmployees();
 
-                    if (employees == null || employees.isEmpty()) {
-                        System.out.println("No employees found.");
-                    } else {
-                        for (Employee e : employees) {
-                            System.out.println("------------------------");
-                            System.out.println("ID: " + e.getEmployeeId());
-                            System.out.println("Name: " + e.getName());
-                            System.out.println("Email: " + e.getEmail());
-                            System.out.println("Department: " + e.getDepartment());
-                            System.out.println("Status: " + e.getStatus());
+                        if (employees.isEmpty()) {
+                            System.out.println("No employees found.");
+                        } else {
+                            for (Employee e : employees) {
+                                System.out.println("------------------------");
+                                System.out.println("ID: " + e.getEmployeeId());
+                                System.out.println("Name: " + e.getName());
+                                System.out.println("Email: " + e.getEmail());
+                                System.out.println(
+                                        "Department: " + e.getDepartment());
+                                System.out.println("Status: " + e.getStatus());
+                            }
                         }
-                    }
-                    break;
+                        break;
 
-                case 4:
-                    System.out.println("\n--- Update Employee ---");
+                    case 4:
+                        System.out.println("\n--- Update Employee ---");
 
-                    System.out.print("Enter employee ID to update: ");
+                        int updateId = readInteger(
+                                scanner, "Enter employee ID to update: ");
 
-                    while (!scanner.hasNextInt()) {
-                        System.out.println("Invalid ID! Enter a number.");
-                        scanner.nextLine();
-                        System.out.print("Enter employee ID to update: ");
-                    }
+                        System.out.print("Enter new name: ");
+                        String newName = scanner.nextLine();
 
-                    int updateId = scanner.nextInt();
-                    scanner.nextLine();
+                        System.out.print("Enter new email: ");
+                        String newEmail = scanner.nextLine();
 
-                    System.out.print("Enter new name: ");
-                    String newName = scanner.nextLine();
+                        System.out.print("Enter new department: ");
+                        String newDepartment = scanner.nextLine();
 
-                    System.out.print("Enter new email: ");
-                    String newEmail = scanner.nextLine();
+                        EmployeeStatus newStatus =
+                                readEmployeeStatus(scanner);
 
-                    System.out.print("Enter new department: ");
-                    String newDepartment = scanner.nextLine();
+                        Employee updatedEmployee = new Employee(
+                                updateId,
+                                newName,
+                                newEmail,
+                                newDepartment,
+                                newStatus
+                        );
 
-                    System.out.print("Enter new status (ACTIVE/INACTIVE): ");
-                    String newStatus = scanner.nextLine();
+                        employeeService.updateEmployee(updatedEmployee);
 
-                    Employee updatedEmployee = new Employee(
-                            updateId,
-                            newName,
-                            newEmail,
-                            newDepartment,
-                            newStatus
-                    );
+                        System.out.println("Employee updated successfully.");
+                        break;
 
-                    employeeService.updateEmployee(updatedEmployee);
-                    break;
+                    case 5:
+                        System.out.println("\n--- Delete Employee ---");
 
-                case 5:
-                    System.out.println("\n--- Delete Employee ---");
+                        int deleteId = readInteger(
+                                scanner, "Enter employee ID to delete: ");
 
-                    System.out.print("Enter employee ID to delete: ");
+                        employeeService.deleteEmployee(deleteId);
 
-                    while (!scanner.hasNextInt()) {
-                        System.out.println("Invalid ID! Enter a number.");
-                        scanner.nextLine();
-                        System.out.print("Enter employee ID to delete: ");
-                    }
+                        System.out.println("Employee deleted successfully.");
+                        break;
 
-                    int deleteId = scanner.nextInt();
-                    scanner.nextLine();
+                    case 6:
+                        System.out.println(
+                                "Exiting Employee Management System. Goodbye!");
+                        break;
 
-                    employeeService.deleteEmployee(deleteId);
-                    break;
+                    default:
+                        System.out.println(
+                                "Invalid choice! Please select 1 to 6.");
+                }
 
-                case 6:
-                    System.out.println("Exiting Employee Management System. Goodbye!");
-                    break;
+            } catch (EmployeeNotFoundException e) {
+                System.out.println("Operation failed: " + e.getMessage());
 
-                default:
-                    System.out.println("Invalid choice! Please select 1 to 6.");
+            } catch (InvalidEmployeeDataException e) {
+                System.out.println("Invalid employee data: " + e.getMessage());
+
+            } catch (SQLException e) {
+                System.out.println(
+                        "Database operation failed. Please try again.");
+
+            } catch (IllegalArgumentException e) {
+                System.out.println("Invalid input: " + e.getMessage());
             }
 
         } while (choice != 6);
 
         scanner.close();
+    }
+
+    // Reusable helper for reading integer input.
+    private static int readInteger(Scanner scanner, String prompt) {
+
+        while (true) {
+            System.out.print(prompt);
+
+            if (scanner.hasNextInt()) {
+                int value = scanner.nextInt();
+                scanner.nextLine();
+                return value;
+            }
+
+            System.out.println("Invalid input! Please enter a number.");
+            scanner.nextLine();
+        }
+    }
+
+    // Reads and validates employee status using the enum.
+    private static EmployeeStatus readEmployeeStatus(Scanner scanner) {
+
+        while (true) {
+            System.out.print("Enter status (ACTIVE/INACTIVE): ");
+
+            String input = scanner.nextLine().trim().toUpperCase();
+
+            try {
+                return EmployeeStatus.valueOf(input);
+            } catch (IllegalArgumentException e) {
+                System.out.println(
+                        "Invalid status! Enter ACTIVE or INACTIVE.");
+            }
+        }
     }
 }
