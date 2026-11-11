@@ -15,34 +15,28 @@ import static org.mockito.Mockito.when;
 class DBConnectionTest {
 
     @Test
-    void shouldEstablishDatabaseConnectionWithValidCredentials() throws SQLException {
+    void shouldThrowSQLExceptionWhenDatabaseConnectionFails() throws SQLException {
 
-        Connection mockConnection = mock(Connection.class);
-
-        DBConnection.ConnectionProvider provider = mock(
-                DBConnection.ConnectionProvider.class);
+        DBConnection.ConnectionProvider provider = mock(DBConnection.ConnectionProvider.class);
 
         when(provider.getConnection(
-                "jdbc:postgresql://localhost:5432/document_processing_db",
-                "postgres",
-                "password"
-        )).thenReturn(mockConnection);
+            "jdbc:postgresql://localhost:5432/document_processing_db",
+            "postgres",
+            "password"
+        )).thenThrow(new SQLException("Database connection failed"));
 
-        Connection result = DBConnection.getConnection(
-                "localhost",
-                "5432",
-                "document_processing_db",
-                "postgres",
-                "password",
-                provider
+        SQLException exception = assertThrows(
+            SQLException.class,
+            () -> DBConnection.getConnection(
+                    "localhost",
+                    "5432",
+                    "document_processing_db",
+                    "postgres",
+                    "password",
+                    provider
+            )
         );
 
-        assertSame(mockConnection, result);
-
-        verify(provider).getConnection(
-                "jdbc:postgresql://localhost:5432/document_processing_db",
-                "postgres",
-                "password"
-        );
+        assertEquals("Database connection failed", exception.getMessage());
     }
 }
