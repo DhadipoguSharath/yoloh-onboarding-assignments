@@ -64,11 +64,113 @@ class DocumentProcessingHandlerTest {
     }
 
     @Test
-    void shouldProcessDocumentSuccessfully() throws Exception {
+    void shouldThrowExceptionForInvalidSqsMessage() {
 
         // Arrange
-        when(connectionProvider.getConnection()).thenReturn(connection);
-        when(connection.prepareStatement(anyString())).thenReturn(statement);
+        SQSEvent.SQSMessage message = new SQSEvent.SQSMessage();
+        message.setBody("invalid-json");
+
+        SQSEvent event = new SQSEvent();
+        event.setRecords(List.of(message));
+
+        // Act & Assert
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context)
+        );
+
+        verify(s3Client, times(0)).getObject(
+                any(GetObjectRequest.class),
+                any(ResponseTransformer.class)
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenBucketNameIsMissing() {
+
+        String messageBody = """
+            {
+                "bucketName": "",
+                "objectKey": "sample.txt",
+                "employeeId": 101
+            }
+            """;
+
+        SQSEvent.SQSMessage message = new SQSEvent.SQSMessage();
+        message.setBody(messageBody);
+
+        SQSEvent event = new SQSEvent();
+        event.setRecords(List.of(message));
+
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context)
+        );
+
+        verify(s3Client, times(0)).getObject(
+                any(GetObjectRequest.class),
+                any(ResponseTransformer.class)
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenObjectKeyIsMissing() {
+
+        String messageBody = """
+            {
+                "bucketName": "test-bucket",
+                "objectKey": "",
+                "employeeId": 101
+            }
+            """;
+
+        SQSEvent.SQSMessage message = new SQSEvent.SQSMessage();
+        message.setBody(messageBody);
+
+        SQSEvent event = new SQSEvent();
+        event.setRecords(List.of(message));
+
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context)
+        );
+
+        verify(s3Client, times(0)).getObject(
+                any(GetObjectRequest.class),
+                any(ResponseTransformer.class)
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenEmployeeIdIsInvalid() {
+
+        String messageBody = """
+            {
+                "bucketName": "test-bucket",
+                "objectKey": "sample.txt",
+                "employeeId": -1
+            }
+            """;
+
+        SQSEvent.SQSMessage message = new SQSEvent.SQSMessage();
+        message.setBody(messageBody);
+
+        SQSEvent event = new SQSEvent();
+        event.setRecords(List.of(message));
+
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context)
+        );
+
+        verify(s3Client, times(0)).getObject(
+                any(GetObjectRequest.class),
+                any(ResponseTransformer.class)
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenS3DownloadFails() throws Exception {
 
         String messageBody = """
             {
@@ -84,28 +186,75 @@ class DocumentProcessingHandlerTest {
         SQSEvent event = new SQSEvent();
         event.setRecords(List.of(message));
 
-        String documentContent = "Employee ID: 101, Name: Sharath";
+        when(connectionProvider.getConnection()).thenReturn(connection);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
 
-        ResponseBytes<GetObjectResponse> documentBytes = ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), documentContent.getBytes(StandardCharsets.UTF_8));
+        doThrow(S3Exception.builder()
+                .message("S3 download failed")
+                .build())
+                .when(s3Client)
+                .getObject(
+                        any(GetObjectRequest.class),
+                        org.mockito.ArgumentMatchers
+                                .<ResponseTransformer<software.amazon.awssdk.services.s3.model.GetObjectResponse, ResponseBytes<software.amazon.awssdk.services.s3.model.GetObjectResponse>>>any()
+                );
 
-        doReturn(documentBytes).when(s3Client).getObject(any(GetObjectRequest.class), org.mockito.ArgumentMatchers.<ResponseTransformer<GetObjectResponse, ResponseBytes<GetObjectResponse>>>any());
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context)
+        );
 
-        // Act
-        assertDoesNotThrow(() -> handler.handleRequest(event, context));
+        verify(s3Client, times(1)).getObject(
+                any(GetObjectRequest.class),
+                any(ResponseTransformer.class)
+        );
 
-        // Assert
-        verify(s3Client, times(1)).getObject(any(GetObjectRequest.class), any(ResponseTransformer.class));
+        verify(statement).setString(4, "FAILED");
+    }
 
-        verify(connectionProvider, times(1)).getConnection();
+    @Test
+    void shouldThrowExceptionWhenDatabaseUpdateFails() throws Exception {
 
-        verify(statement).setInt(1, 101);
-        verify(statement).setString(2, "test-bucket");
-        verify(statement).setString(3, "sample.txt");
+        String messageBody = """
+            {
+                "bucketName": "test-bucket",
+                "objectKey": "sample.txt",
+                "employeeId": 101
+            }
+            """;
+
+        SQSEvent.SQSMessage message = new SQSEvent.SQSMessage();
+        message.setBody(messageBody);
+
+        SQSEvent event = new SQSEvent();
+        event.setRecords(List.of(message));
+
+        when(connectionProvider.getConnection()).thenReturn(connection);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+
+        doThrow(new SQLException("Database update failed"))
+                .when(statement)
+                .executeUpdate();
+
+        ResponseBytes<GetObjectResponse> documentBytes
+                = ResponseBytes.fromByteArray(
+                        GetObjectResponse.builder().build(),
+                        "Test document".getBytes(StandardCharsets.UTF_8)
+                );
+
+        doReturn(documentBytes).when(s3Client).getObject(
+                any(GetObjectRequest.class),
+                org.mockito.ArgumentMatchers
+                        .<ResponseTransformer<GetObjectResponse, ResponseBytes<GetObjectResponse>>>any()
+        );
+
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context)
+        );
+
+        verify(statement, times(2)).executeUpdate();
         verify(statement).setString(4, "SUCCESS");
-        verify(statement).setString(5, null);
-
-        verify(statement, times(1)).executeUpdate();
-
-        verify(connection, times(1)).close();
+        verify(statement).setString(4, "FAILED");
     }
 }
