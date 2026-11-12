@@ -4,3 +4,6 @@
 
 # Compiled Java classes
 out/
+
+
+target/
