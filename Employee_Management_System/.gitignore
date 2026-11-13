@@ -1,0 +1,9 @@
+
+# Local environment variables
+.env
+
+# Compiled Java classes
+out/
+
+
+target/
