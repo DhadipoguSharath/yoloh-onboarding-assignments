@@ -19,7 +19,22 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 public class DocumentProcessingHandler implements RequestHandler<SQSEvent, Void> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final S3Client s3Client = S3Client.create();
+    private final S3Client s3Client;
+    private final ConnectionProvider connectionProvider;
+
+    public DocumentProcessingHandler() {
+        this(S3Client.create(), DBConnection::getConnection);
+    }
+
+    DocumentProcessingHandler(S3Client s3Client, ConnectionProvider connectionProvider) {
+        this.s3Client = s3Client;
+        this.connectionProvider = connectionProvider;
+    }
+
+    @FunctionalInterface
+    interface ConnectionProvider {
+        Connection getConnection() throws SQLException;
+    }
 
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
@@ -99,7 +114,7 @@ public class DocumentProcessingHandler implements RequestHandler<SQSEvent, Void>
                 INSERT INTO document_processing (employee_id, bucket_name, object_key,processing_status, error_message)
                 VALUES (?, ?, ?, ?, ?)
                 """;
-        try (Connection connection = DBConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (Connection connection = connectionProvider.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, employeeId);
             statement.setString(2, bucketName);
             statement.setString(3, objectKey);
