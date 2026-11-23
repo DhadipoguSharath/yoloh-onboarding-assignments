@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DBConnectionTest {
@@ -36,6 +37,12 @@ class DBConnectionTest {
         );
 
         assertEquals("Database connection failed", exception.getMessage());
+
+        verify(provider).getConnection(
+                "jdbc:postgresql://localhost:5432/document_processing_db",
+                "postgres",
+                "password"
+        );
     }
 
     @Test
@@ -55,12 +62,41 @@ class DBConnectionTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenDatabasePortIsMissing() {
+    void shouldThrowExceptionWhenDatabaseHostContainsOnlyWhitespace() {
 
         assertThrows(
                 IllegalStateException.class,
                 () -> DBConnection.getConnection(
+                        " ", "5432", "document_processing_db",
+                        "postgres", "password",
+                        (url, username, password) -> null
+                )
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDatabasePortIsMissing() {
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> DBConnection.getConnection(
                         "localhost", "", "document_processing_db",
+                        "postgres", "password",
+                        (url, username, password) -> null
+                )
+        );
+
+        assertTrue(exception.getMessage().contains(
+                "Required database environment variables are missing"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDatabasePortContainsOnlyWhitespace() {
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> DBConnection.getConnection(
+                        "localhost", " ", "document_processing_db",
                         "postgres", "password",
                         (url, username, password) -> null
                 )
@@ -81,6 +117,19 @@ class DBConnectionTest {
     }
 
     @Test
+    void shouldThrowExceptionWhenDatabaseNameContainsOnlyWhitespace() {
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> DBConnection.getConnection(
+                        "localhost", "5432", " ",
+                        "postgres", "password",
+                        (url, username, password) -> null
+                )
+        );
+    }
+
+    @Test
     void shouldThrowExceptionWhenUsernameIsMissing() {
 
         assertThrows(
@@ -94,9 +143,22 @@ class DBConnectionTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenPasswordIsMissing() {
+    void shouldThrowExceptionWhenUsernameContainsOnlyWhitespace() {
 
         assertThrows(
+                IllegalStateException.class,
+                () -> DBConnection.getConnection(
+                        "localhost", "5432", "document_processing_db",
+                        " ", "password",
+                        (url, username, password) -> null
+                )
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenPasswordIsMissing() {
+
+        IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
                 () -> DBConnection.getConnection(
                         "localhost", "5432", "document_processing_db",
@@ -104,5 +166,8 @@ class DBConnectionTest {
                         (url, username, password) -> null
                 )
         );
+
+        assertTrue(exception.getMessage().contains(
+                "Required database environment variables are missing"));
     }
 }
